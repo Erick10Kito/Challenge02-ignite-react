@@ -1,0 +1,201 @@
+Objetivo = Os componentes "sidebar" e "Content" estão vazios e o App é onde contem todo o codigo da aplicação minha missão é colocar os códigos da sidebar e Cotent que etão no App, dentro dos arquivos vazios, porem tem algumas complicações
+
+
+
+Vou exlicar a declaração de função atraves de um exemplo:
+
+function handleClickButton(id: number) {
+    setSelectedGenreId(id);
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row' }}>
+      <nav className="sidebar">
+        <span>Watch<p>Me</p></span>
+
+        <div className="buttons-container">
+          {genres.map(genre => (
+            <Button
+              key={String(genre.id)}
+              title={genre.title}
+              iconName={genre.name}
+              onClick={() => handleClickButton(genre.id)}
+              selected={selectedGenreId === genre.id}
+            />
+          ))}
+
+          como podemos observar nesse caso, na linha 7 foi declarado uma função e o que tem dentro das aspas, praticamente não importa , no caso ele esta mostrando que oque chegar da função quando ela for executada, vai se chamar
+          id e vai ter como tipo string, ja na linha 8 ele salva oque vier quando a função for executada para o state, ja que é um UseState, ja na linha 22 é qunado a função é executada, que é quando a pessoa apertar o butão, e o que esta
+          entre parenteses é o que vai ser passado para a função quando o botão for clicado.
+
+
+
+
+
+
+
+=========================================================================================================================================================================================================================================
+
+          falando da aplicação atual, quando eu tento colocar os estados em content e sidebar, por mais que eles possuam o mesmo nome, eles não são o mesmo estado, tehno que fazer uma funcionalidade que funciina dentro do 
+          content funcionar dentro da sidebar ou vice-versa.
+
+          Peguei tudo dentro da função App e coloquei dentro dos componentes, menos os os codigos relacionados ao content e sidebar , que eu coloquei repectivamente nos componentes citados anteriormente.
+
+          Depois peguei as importações que estavam no App e coloquei nos componentes, depois retiro tudo que esta dentro da função App, porem quando eu faço desse jeito, na aplicação quando eu clico em um genero na sidebar, o conteudo 
+          não muda, ou seja quando eu clico na opção comedia na sidebar , não aparece os filmes de comedia na tela.
+
+          Quando selecionamos uma opção no sidebar o codigo que é usado é esse:
+
+          function handleClickButton(id: number) {
+                setSelectedGenreId(id);
+            }
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'row' }}>
+                <nav className="sidebar">
+                    <span>Watch<p>Me</p></span>
+
+                    <div className="buttons-container">
+                    {genres.map(genre => (
+                        <Button
+                        key={String(genre.id)}
+                        title={genre.title}
+                        iconName={genre.name}
+                        onClick={() => handleClickButton(genre.id)}
+                        selected={selectedGenreId === genre.id}
+                        />
+                    ))}
+
+          Podemos ver que se trata de um UseState, quando o botão for clicado a função vai trocar o selectedGenerID, porem como eu disse antes , os states 
+          e funcionaldades podem ate ter os mesmos nomes, mas estão em componentes diferentes, por isso somente o sidebar vai mudar. Por isso preciso dar um jeito de fazer o estado ser 
+          compartilhado e para fazer isso utilizaremos o levantamento de estado (https://pt-br.reactjs.org/docs/lifting-state-up.html)
+
+          Vamos tentar compartilhar o estado por meio de propriedades
+          Precisa ser compartilhado entre a sidebar e o content é basicamente um unico estado
+
+
+
+          - Sidebar precisa saber do id genero para saber o genero selecionado e o content tambem precisa saber o genero selecionado , pois a partir do genero selecionado ele vai te mostrar os filmes
+          ou seja , as informações do genero selecionado precisam estar compartilhado.
+
+
+
+
+
+          o Movies que inicialmente esta dentro do App não precisa estar compartilhado, portanto basta eu colocar isso somente no content, pois somente ele precisa saber dos 
+          filmes , ja que dentro da sidebar nao tem informações do filme
+          Oque colocardentro de content que tem ligação com os filmes:
+
+          const [movies, setMovies] = useState<MovieProps[]>([]);
+
+          interface MovieProps {
+            imdbID: string;
+            Title: string;
+            Poster: string;
+            Ratings: Array<{
+                Source: string;
+                Value: string;
+            }>;
+            Runtime: string;
+            }
+
+
+
+
+            useEffect(() => {
+                api.get<MovieProps[]>(`movies/?Genre_id=${selectedGenreId}`).then(response => {             
+                setMovies(response.data);
+                });
+            }, [selectedGenreId]);
+
+             Esse tem uma peculiaridade que é que ele tem propriedades de Genero e por esse motivo sera obrigado a criar a seguinte interface:
+
+             interface ContentProps {
+              selectedGenreId: number;
+             }
+
+             e depois coocar o props na função igual a maneira demonstrada abaixo:
+             ---export function Content({selectedGenreId}: ContentProps) {---
+             Aqui eu desestruturei o selectedGenreId e passei a interface ContentProps pra ele, ou seja ja é possivel identificar que o componente content recebe essa propriedade para funcionar
+
+             Depois vai dar uma erro no selectedGenre, e o jeito de arrumar isso é pegando a interface dele que esta la no App e passando para o Content, e depois adicionar ele na ContentProps passando 
+             o nome da Propriedade dele, e ficaria assim:
+
+             Propriedade do selectedGenre --> interface GenreResponseProps {
+                                                    id: number;
+                                                    name: 'action' | 'comedy' | 'documentary' | 'drama' | 'horror' | 'family';
+                                                    title: string;
+                                               }
+
+             ContentProps com o selectedGenre --> interface ContentProps {
+                                                    selectedGenreId: number;
+                                                    selectedGenre: GenreResponseProps;
+                                                  }
+
+             Depois eu vou desestruturar tambemo selectedGenre na função Content, e vou fazer isso da mesma forma que eu fiz com o selectedGenerID:
+             ---export function Content({selectedGenreId, selectedGenre}: ContentProps) {---
+             Lembrando que eu deixendo o ContentProps como propriedadede ambos , pois nele o selectedGenre ja recebe a propriedade que ele precisa, portanto não é necessario fazer mais do que isso, ja que foi criado um props pro 
+             selectedGenre(GenreResponseProps) e esse props foi puxado no ContentProps(LINHA 132)
+
+             Com isso parou o erro , mas ainda nao esta funcionando a aplicação.
+
+
+             Agora ja no App.tsx vamos passar pro content as propriedades que ele esta esperando receber, e para isso iremos la dentro do return da função App na qual iremos passar as seguintes propriedades:
+             return (
+                <div style={{ display: 'flex', flexDirection: 'row' }}>
+                
+                <SideBar/>
+                <Content selectedGenre={selectedGenre} selectedGenreId={selectedGenreId}/>
+                
+                </div>
+            )
+            }
+
+            Lembrando que os estados devem estar dentro do App tambem.
+            ======================================================================================================================================================================================================================================
+
+
+
+            Pronto , fizemos tudo para o content , porem ainda falta a Sidebar entao vamos continuar
+
+            Agoravou mover os seguintes itens que estão no App para a sidebar:
+            ------const [genres, setGenres] = useState<GenreResponseProps[]>([]);------
+            ------interface GenreResponseProps {--------------------------------------
+                        id: number;
+                        name: 'action' | 'comedy' | 'documentary' | 'drama' | 'horror' | 'family';
+                        title: string;
+                    }
+
+
+                    useEffect(() => {
+                        api.get<GenreResponseProps[]>('genres').then(response => {
+                        setGenres(response.data);
+                        });
+                    }, []);
+                    Como esse useEffect faz uma busca pra sidear ele tambem não precisa ser comppartilhado, pois ele faz uma busca para a sidebar
+
+                    Lembrando que o setSelectedGenreId ou selectedGenerID esta sendo compartilhado tanto na sidear quanto no content.
+
+                    e depois vou desestruturar o handleClickButton e selectedGenerID da seguinte forma e tamvem criar um interface de sidebar
+
+                    desestruturaração de handleClickButton e selectedGenerID --> export function SideBar({handleClickButton, selectedGenreId}:SidebarProps) {
+
+                    Interface -->   interface SidebarProps {
+                                        handleClickButton: (id: number) => void;
+                                        selectedGenreId: number;
+                                    }
+                     
+                     Agora ja no App.tsx vamos passar pro SideBar as propriedades que ele esta esperando receber, e para isso iremos la dentro do return da função App na qual iremos passar as seguintes propriedades:
+
+                        return (
+                                <div style={{ display: 'flex', flexDirection: 'row' }}>
+
+                                <SideBar selectedGenreId={selectedGenreId} handleClickButton={handleClickButton} />
+                                <Content selectedGenre={selectedGenre} selectedGenreId={selectedGenreId} />
+
+                                </div>
+                        )
+                    }
+
+
+                    E Depois disso estudo pronto , tudo funcional!
